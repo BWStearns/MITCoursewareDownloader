@@ -1,0 +1,69 @@
+import StringIO
+import zipfile
+from requests import Session
+from os import path, rename
+from urlparse import urljoin
+from BeautifulSoup import BeautifulSoup
+
+
+class Downloader(object):
+    def __init__(self, course_list, curriculum_home=None):
+        self.courses = course_list
+        self.curriculum_home = curriculum_home
+        self.s = Session()
+
+    def download_courseware(self, course_url):
+        download_url = "/".join([course_url.strip("/"), "download-course-materials/"])
+        download_page = self.s.get(download_url).content
+        soup = BeautifulSoup(download_page)
+        title = soup.find("title").text.split("|")[1].strip().replace(" ", "_")
+        print "Saving as {0}".format(title)
+        z_url = "http://ocw.mit.edu" + soup.find('a', target="blank").get('href')
+        z = self.s.get(z_url)
+        # import ipdb; ipdb.set_trace()
+        zf = zipfile.ZipFile(StringIO.StringIO(z.content))
+        zf.extractall(path=self.curriculum_home)
+        rename(zf.namelist()[1].split("/")[0], title)
+
+
+    def download_curriculum(self):
+        for c in self.courses:
+            try:
+                print "Downloading {0}".format(c.split("/")[-1])
+                self.download_courseware(c)
+                print "SUCCESS"
+            except Exception as e:
+                print "FAILED:", e
+
+
+
+mycourses = [
+    "http://ocw.mit.edu/courses/mathematics/18-01sc-single-variable-calculus-fall-2010",
+    "http://ocw.mit.edu/courses/mathematics/18-013a-calculus-with-applications-spring-2005",
+    "http://ocw.mit.edu/courses/mathematics/18-02sc-multivariable-calculus-fall-2010",
+    "http://ocw.mit.edu/courses/mathematics/18-034-honors-differential-equations-spring-2009",
+    "http://ocw.mit.edu/courses/mathematics/18-098-street-fighting-mathematics-january-iap-2008/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-042j-mathematics-for-computer-science-fall-2010",
+    "http://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014",
+    "http://ocw.mit.edu/courses/mathematics/18-901-introduction-to-topology-fall-2004",
+    "http://ocw.mit.edu/courses/mathematics/18-s996-category-theory-for-scientists-spring-2013/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-002-circuits-and-electronics-spring-2007/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-007-electromagnetic-energy-from-motors-to-lasers-spring-2011",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-012-microelectronic-devices-and-circuits-spring-2009/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-452-principles-of-wireless-communications-spring-2006/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-331-advanced-circuit-techniques-spring-2002/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-301-solid-state-circuits-fall-2010/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-001-structure-and-interpretation-of-computer-programs-spring-2005/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-004-computation-structures-spring-2009/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-011-introduction-to-communication-control-and-signal",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-034-artificial-intelligence-fall-2010/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-824-distributed-computer-systems-engineering-spring-2006",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-933j-the-structure-of-engineering-revolutions-fall-2001",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-849-geometric-folding-algorithms-linkages-origami-polyhedra-fall-2012/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-050j-information-and-entropy-spring-2008/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-830-database-systems-fall-2010/",
+    "http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-s096-effective-programming-in-c-and-c-january-iap-2014/",
+]
+
+d = Downloader(mycourses, curriculum_home="/bsites/mit/")
+d.download_curriculum()
